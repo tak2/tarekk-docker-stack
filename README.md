@@ -82,8 +82,8 @@ makefile
 Copy code
 
 Example:  
-panel.tarekk.com → 193.42.60.234
-blog1.tarekk.com → 193.42.60.234
+panel.tarekk.com → myip
+blog1.tarekk.com → myip
 
 yaml
 Copy code

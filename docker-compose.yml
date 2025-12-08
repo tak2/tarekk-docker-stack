@@ -5,14 +5,28 @@ networks:
     external: true
   wp1_net:
     driver: bridge
+  wp2_net:
+    driver: bridge
+  wp3_net:
+    driver: bridge
 
 volumes:
   portainer_data:
+
   wp1_db_data:
   wp1_wp_data:
 
+  wp2_db_data:
+  wp2_wp_data:
+
+  wp3_db_data:
+  wp3_wp_data:
+
 services:
 
+  # ==========================
+  # Traefik Reverse Proxy
+  # ==========================
   traefik:
     image: traefik:v2.11
     container_name: traefik
@@ -36,6 +50,9 @@ services:
       - proxy
     restart: unless-stopped
 
+  # ==========================
+  # Portainer
+  # ==========================
   portainer:
     image: portainer/portainer-ce
     container_name: portainer
@@ -53,6 +70,9 @@ services:
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
     restart: unless-stopped
 
+  # ==========================
+  # WordPress Site #1
+  # ==========================
   wp1_db:
     image: mariadb:10.11
     container_name: wp1_db
@@ -88,4 +108,140 @@ services:
       - "traefik.http.routers.wp1.entrypoints=websecure"
       - "traefik.http.routers.wp1.tls.certresolver=le"
       - "traefik.http.services.wp1.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  # ==========================
+  # WordPress Site #2
+  # ==========================
+  wp2_db:
+    image: mariadb:10.11
+    container_name: wp2_db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: wp2_db
+      MYSQL_USER: wp2_user
+      MYSQL_PASSWORD: ${WP_DB_PASSWORD}
+    volumes:
+      - "wp2_db_data:/var/lib/mysql"
+    networks:
+      - wp2_net
+    restart: unless-stopped
+
+  wp2:
+    image: wordpress:php8.2-apache
+    container_name: wp2
+    depends_on:
+      - wp2_db
+    environment:
+      WORDPRESS_DB_HOST: wp2_db:3306
+      WORDPRESS_DB_USER: wp2_user
+      WORDPRESS_DB_PASSWORD: ${WP_DB_PASSWORD}
+      WORDPRESS_DB_NAME: wp2_db
+    volumes:
+      - "wp2_wp_data:/var/www/html"
+    networks:
+      - proxy
+      - wp2_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wp2.rule=Host(`${BLOG2_SUB}.${DOMAIN}`)"
+      - "traefik.http.routers.wp2.entrypoints=websecure"
+      - "traefik.http.routers.wp2.tls.certresolver=le"
+      - "traefik.http.services.wp2.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  # ==========================
+  # WordPress Site #3
+  # ==========================
+  wp3_db:
+    image: mariadb:10.11
+    container_name: wp3_db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: wp3_db
+      MYSQL_USER: wp3_user
+      MYSQL_PASSWORD: ${WP_DB_PASSWORD}
+    volumes:
+      - "wp3_db_data:/var/lib/mysql"
+    networks:
+      - wp3_net
+    restart: unless-stopped
+
+  wp3:
+    image: wordpress:php8.2-apache
+    container_name: wp3
+    depends_on:
+      - wp3_db
+    environment:
+      WORDPRESS_DB_HOST: wp3_db:3306
+      WORDPRESS_DB_USER: wp3_user
+      WORDPRESS_DB_PASSWORD: ${WP_DB_PASSWORD}
+      WORDPRESS_DB_NAME: wp3_db
+    volumes:
+      - "wp3_wp_data:/var/www/html"
+    networks:
+      - proxy
+      - wp3_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wp3.rule=Host(`${BLOG3_SUB}.${DOMAIN}`)"
+      - "traefik.http.routers.wp3.entrypoints=websecure"
+      - "traefik.http.routers.wp3.tls.certresolver=le"
+      - "traefik.http.services.wp3.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  # ==========================
+  # Netdata Monitoring
+  # ==========================
+  netdata:
+    image: netdata/netdata
+    container_name: netdata
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.netdata.rule=Host(`${MONITOR_SUB}.${DOMAIN}`)"
+      - "traefik.http.routers.netdata.entrypoints=websecure"
+      - "traefik.http.routers.netdata.tls.certresolver=le"
+      - "traefik.http.services.netdata.loadbalancer.server.port=19999"
+    restart: unless-stopped
+
+  # ==========================
+  # Node.js API (example)
+  # ==========================
+  nodeapi:
+    build: ./api-node
+    container_name: nodeapi
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nodeapi.rule=Host(`${NODE_SUB}.${DOMAIN}`)"
+      - "traefik.http.routers.nodeapi.entrypoints=websecure"
+      - "traefik.http.routers.nodeapi.tls.certresolver=le"
+      - "traefik.http.services.nodeapi.loadbalancer.server.port=3000"
+    restart: unless-stopped
+
+  # ==========================
+  # Python API (example)
+  # ==========================
+  pyapi:
+    build: ./api-python
+    container_name: pyapi
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pyapi.rule=Host(`${PY_SUB}.${DOMAIN}`)"
+      - "traefik.http.routers.pyapi.entrypoints=websecure"
+      - "traefik.http.routers.pyapi.tls.certresolver=le"
+      - "traefik.http.services.pyapi.loadbalancer.server.port=8000"
     restart: unless-stopped

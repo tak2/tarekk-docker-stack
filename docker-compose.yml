@@ -1,0 +1,91 @@
+version: "3.8"
+
+networks:
+  proxy:
+    external: true
+  wp1_net:
+    driver: bridge
+
+volumes:
+  portainer_data:
+  wp1_db_data:
+  wp1_wp_data:
+
+services:
+
+  traefik:
+    image: traefik:v2.11
+    container_name: traefik
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.le.acme.email=${EMAIL}"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.le.acme.httpchallenge=true"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./traefik/letsencrypt:/letsencrypt"
+    networks:
+      - proxy
+    restart: unless-stopped
+
+  portainer:
+    image: portainer/portainer-ce
+    container_name: portainer
+    command: -H unix:///var/run/docker.sock
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "portainer_data:/data"
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`${PANEL_SUB}.${DOMAIN}`)"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.tls.certresolver=le"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+    restart: unless-stopped
+
+  wp1_db:
+    image: mariadb:10.11
+    container_name: wp1_db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: wp1_db
+      MYSQL_USER: wp1_user
+      MYSQL_PASSWORD: ${WP_DB_PASSWORD}
+    volumes:
+      - "wp1_db_data:/var/lib/mysql"
+    networks:
+      - wp1_net
+    restart: unless-stopped
+
+  wp1:
+    image: wordpress:php8.2-apache
+    container_name: wp1
+    depends_on:
+      - wp1_db
+    environment:
+      WORDPRESS_DB_HOST: wp1_db:3306
+      WORDPRESS_DB_USER: wp1_user
+      WORDPRESS_DB_PASSWORD: ${WP_DB_PASSWORD}
+      WORDPRESS_DB_NAME: wp1_db
+    volumes:
+      - "wp1_wp_data:/var/www/html"
+    networks:
+      - proxy
+      - wp1_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wp1.rule=Host(`${BLOG1_SUB}.${DOMAIN}`)"
+      - "traefik.http.routers.wp1.entrypoints=websecure"
+      - "traefik.http.routers.wp1.tls.certresolver=le"
+      - "traefik.http.services.wp1.loadbalancer.server.port=80"
+    restart: unless-stopped

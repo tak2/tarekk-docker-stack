@@ -1,141 +1,89 @@
 # 🐳 Modern Docker Hosting Stack (Traefik + WordPress + APIs + Monitoring)
 
-A production-ready, fully automated Docker hosting stack for VPS environments.
-
-This setup includes:
-
-- **Traefik v2** — Reverse Proxy + Automatic HTTPS (Let's Encrypt)  
-- **Portainer** — Docker Management UI  
-- **Multiple WordPress Sites**  
-- **Node.js API Template**  
-- **Python FastAPI Template**  
-- **Netdata Monitoring Dashboard**  
-- **Secure Firewall + Fail2Ban Protection**  
-- **Zero Secrets in GitHub (runtime .env generation)**
-
-Works on **Ubuntu 22.04 LTS** with **2 GB RAM or more**, ideal for multi-site hosting and API workloads.
-
----
+A production-ready Docker hosting stack for Ubuntu 22.04+ that bundles Traefik, Portainer, three WordPress sites, Node.js and Python API templates, and Netdata monitoring. Secrets stay out of Git, certificates are issued automatically, and everything lives behind a hardened reverse proxy.
 
 ## 🚀 Features
 
 ### 🔐 Security
-- No passwords or secrets in repo  
-- `.env` auto-generated at runtime  
-- UFW firewall with only essential ports open  
-- Fail2Ban protection against brute-force attacks  
-- Optional Cloudflare compatibility  
+- No passwords or secrets in repo (.env generated at runtime)
+- UFW firewall + Fail2Ban hardening script
+- Optional Cloudflare compatibility
+- Traefik dashboard disabled by default (configurable in `traefik/traefik.yml`)
 
 ### 🌍 Domain & SSL
-- Automatic Let’s Encrypt certificates  
-- Every subdomain routed through Traefik  
-- All traffic forced through HTTPS  
+- Automatic Let’s Encrypt certificates
+- Every subdomain routed through Traefik
+- All traffic forced through HTTPS
 
 ### 📰 WordPress Multi-Site Support
-- Host **3 WordPress sites by default**  
-- Fully isolated networks & databases  
-- Persistent volumes for DB & WP files  
-- Easy to add more sites (blog4, shop, news, etc.)  
+- Host **3 WordPress sites by default**
+- Isolated networks & databases with persistent volumes
+- Easy to add more sites
 
 ### 🧑‍💻 Developer-Friendly APIs
-Includes templates to host your own APIs:
-
-- `nodeapi.<domain>` → Node.js Express  
-- `api.<domain>` → Python FastAPI  
-
-Use them for:
-- bots  
-- EGX trading tools  
-- webhooks  
-- automations  
-- dashboards  
-- internal APIs  
+- `nodeapi.<domain>` → Node.js Express
+- `api.<domain>` → Python FastAPI
 
 ### 📊 Monitoring
-- Netdata dashboard at `monitor.<domain>`  
-- Real-time CPU, memory, disk, network, Docker metrics  
-- Lightweight, automatic, secure  
-
----
+- Netdata dashboard at `monitor.<domain>`
+- Real-time CPU, memory, disk, network, and Docker metrics
 
 ## 📦 Requirements
 
-- VPS with Ubuntu **22.04 LTS**  
-- Root or sudo access  
-- Domain name (e.g. `tarekk.com`)  
-- DNS access to create A records  
-
----
+- VPS with Ubuntu **22.04 LTS**
+- Root or sudo access
+- Domain name (e.g. `tarekk.com`) and DNS access to create A records
 
 ## 🛠 Installation
 
-### 1. Clone this repo
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/<your-user>/<your-repo>.git
+   cd <your-repo>
+   ```
 
-```bash
-git clone https://github.com/<your-user>/<your-repo>.git
-cd <your-repo>
-2. Run the setup script (Docker + Traefik + env builder)
-bash
-Copy code
-sudo ./setup.sh
-You will be asked for:
+2. **Run the setup script (installs Docker + Compose, prepares Traefik, builds .env)**
+   ```bash
+   sudo ./setup.sh
+   ```
+   The script asks for your domain, subdomains, SSL email, and database passwords. It installs Docker, prepares Traefik folders, generates `.env`, and ensures the shared proxy network exists. If you ever need to recreate the network manually:
+   ```bash
+   docker network create proxy
+   ```
 
-domain
+3. **(Optional) Apply security hardening**
+   ```bash
+   sudo ./security-harden.sh
+   ```
+   See [Security Hardening](#-security-hardening) for details about what this script changes and links to upstream documentation.
 
-subdomains
+4. **Start all services**
+   ```bash
+   docker compose up -d
+   ```
 
-email for SSL
+5. **Verify containers**
+   ```bash
+   docker compose ps
+   ```
 
-MySQL root password
+## 🌍 DNS Configuration
 
-WordPress DB passwords
+1. Point the following subdomains to your server’s public IP (A records):
+   ```
+   panel.<domain>    → VPS IP (Portainer)
+   blog1.<domain>    → VPS IP (WordPress 1)
+   blog2.<domain>    → VPS IP (WordPress 2)
+   blog3.<domain>    → VPS IP (WordPress 3)
+   monitor.<domain>  → VPS IP (Netdata)
+   nodeapi.<domain>  → VPS IP (Node Express API)
+   api.<domain>      → VPS IP (Python FastAPI)
+   ```
+2. After DNS propagates, Traefik automatically requests SSL certificates.
 
-This script:
+## 🏗 Stack Architecture
 
-✓ Installs Docker
-✓ Installs Compose
-✓ Creates proxy network
-✓ Creates .env (ignored by Git)
-✓ Prepares Traefik folders
-
-3. (Optional) Security Hardening
-bash
-Copy code
-sudo ./security-harden.sh
-This enables:
-
-UFW firewall
-
-Fail2Ban
-
-SSH rate-limiting
-
-4. Start all services
-bash
-Copy code
-docker compose up -d
-🌍 Configure DNS
-Create the following A records:
-
-java
-Copy code
-panel.<domain>    → VPS IP (Portainer)
-blog1.<domain>    → VPS IP (WordPress 1)
-blog2.<domain>    → VPS IP (WordPress 2)
-blog3.<domain>    → VPS IP (WordPress 3)
-monitor.<domain>  → VPS IP (Netdata)
-nodeapi.<domain>  → VPS IP (Node Express API)
-api.<domain>      → VPS IP (Python FastAPI)
-Example:
-
-Copy code
-panel.tarekk.com   → 193.42.60.234
-blog1.tarekk.com   → 193.42.60.234
-Traefik automatically requests SSL certificates once DNS is correct.
-
-🏗 Stack Architecture
-php-template
-Copy code
+```
 Internet
    │
    ▼
@@ -150,99 +98,76 @@ Internet
       ├── monitor.<domain> → Netdata Dashboard
       ├── nodeapi.<domain> → Node.js API
       └── api.<domain>     → Python FastAPI
-📰 WordPress Sites
-Your stack includes 3 WordPress sites:
+```
 
-blog1.<domain>
+## 📰 WordPress Sites
 
-blog2.<domain>
+- Default sites: `blog1.<domain>`, `blog2.<domain>`, `blog3.<domain>`
+- Each site has its own MariaDB container, WordPress container, isolated network, and persistent volumes.
+- To add a new site, duplicate a WordPress block in `docker-compose.yml` (e.g., copy `wp3` to create `wp4`) and adjust the subdomain, database, and labels.
 
-blog3.<domain>
+## 🧑‍💻 API Endpoints
 
-Each has:
+### Node API
+- Location: `/api-node/`
+- URL: `https://nodeapi.<domain>/`
+- Default response:
+  ```json
+  {
+    "message": "Hello from Node API!",
+    "time": "2025-01-01T00:00:00Z"
+  }
+  ```
 
-Its own MariaDB container
+### Python FastAPI
+- Location: `/api-python/`
+- URL: `https://api.<domain>/`
+- Install dependencies with the pinned requirements file:
+  ```bash
+  pip install -r api-python/requirements.txt
+  ```
+- Default response:
+  ```json
+  {
+    "message": "Hello from Python FastAPI!",
+    "time": "2025-01-01T00:00:00Z"
+  }
+  ```
 
-Its own WP container
+## 📊 Monitoring
 
-Its own isolated Docker network
+Netdata is available at `https://monitor.<domain>` and provides CPU, memory, disk I/O, network traffic, and container metrics.
 
-Persistent volumes for DB & WP files
+## 🧰 Useful Commands
 
-Adding More WordPress Sites
-Duplicate the wp3 block in docker-compose.yml, rename to wp4, update env vars and labels.
+- View logs:
+  ```bash
+  docker logs -f traefik
+  docker logs -f wp1
+  ```
+- Restart a service:
+  ```bash
+  docker compose restart wp1
+  ```
+- Bring down everything:
+  ```bash
+  docker compose down
+  ```
 
-I can generate that for you on request.
+## 🔐 Security Hardening
 
-🧑‍💻 API Endpoints
-Node API
-Location: /api-node/
+Running `sudo ./security-harden.sh` installs and configures:
+- **UFW firewall**: denies incoming traffic by default, allows SSH (your chosen port), and opens ports 80/443; SSH is rate-limited to reduce brute-force attempts. See the Ubuntu UFW guide: https://help.ubuntu.com/community/UFW
+- **Fail2Ban**: enables the SSH jail with a 1-hour ban after 5 failed attempts, tied to `/var/log/auth.log`. See the Fail2Ban documentation: https://www.fail2ban.org/wiki/index.php/Main_Page
 
-URL: https://nodeapi.<domain>/
+The script immediately enforces these settings, which may affect remote access if ports are misconfigured. Confirm your SSH port and access method before running it.
 
-Default returns:
+## 🔒 Security Notes
 
-json
-Copy code
-{
-  "message": "Hello from Node API!",
-  "time": "2025-01-01T00:00:00Z"
-}
-Python FastAPI
-Location: /api-python/
-
-URL: https://api.<domain>/
-
-Default returns:
-
-json
-Copy code
-{
-  "message": "Hello from Python FastAPI!",
-  "time": "2025-01-01T00:00:00Z"
-}
-📊 Monitoring
-Netdata available at:
-
-arduino
-Copy code
-https://monitor.<domain>
-Shows:
-
-CPU usage
-
-Memory usage
-
-Docker container stats
-
-Disk I/O
-
-Network traffic
-
-Database performance
-
-🧰 Useful Commands
-View logs
-bash
-Copy code
-docker logs -f traefik
-docker logs -f wp1
-Restart a service
-bash
-Copy code
-docker compose restart wp1
-Bring down everything
-bash
-Copy code
-docker compose down
-🔐 Security Notes
-NEVER commit your .env file.
-
-SSH should ideally use key authentication.
-
-Keep Ubuntu updated:
-
-bash
-Copy code
-sudo apt update && sudo apt upgrade -y
-For maximum safety, use Cloudflare in front of your domain.
+- NEVER commit your `.env` file.
+- Use SSH key authentication whenever possible.
+- Keep Ubuntu updated:
+  ```bash
+  sudo apt update && sudo apt upgrade -y
+  ```
+- For maximum safety, consider placing Cloudflare in front of your domain.

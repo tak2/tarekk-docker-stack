@@ -1,0 +1,31 @@
+log:
+  level: INFO
+
+accessLog: {}
+
+api:
+  dashboard: false
+  insecure: false
+
+ping:
+  entryPoint: ping
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+  ping:
+    address: ":8082"
+
+providers:
+  docker:
+    exposedByDefault: false
+
+certificatesResolvers:
+  le:
+    acme:
+      email: "${EMAIL}"
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: web

@@ -1,6 +1,6 @@
-# 🐳 Modern Docker Hosting Stack (Traefik + WordPress + APIs + Monitoring)
+# 🐳 Modern Docker Hosting Stack (Traefik + WordPress + Moodle + Vue + APIs)
 
-A production-ready Docker hosting stack for Ubuntu 22.04+ that bundles Traefik, Portainer, three WordPress sites, Node.js and Python API templates, and Netdata monitoring. Secrets stay out of Git, certificates are issued automatically, and everything lives behind a hardened reverse proxy.
+A production-ready Docker hosting stack for Ubuntu 22.04+ that bundles Traefik, Portainer, a single WordPress site, Moodle LMS, a Vue frontend endpoint, Node.js and Python API templates, and Netdata monitoring. Secrets stay out of Git, certificates are issued automatically, and everything lives behind a hardened reverse proxy.
 
 ## 🚀 Features
 
@@ -15,10 +15,11 @@ A production-ready Docker hosting stack for Ubuntu 22.04+ that bundles Traefik, 
 - Every subdomain routed through Traefik
 - All traffic forced through HTTPS
 
-### 📰 WordPress Multi-Site Support
-- Host **3 WordPress sites by default**
+### 📰 WordPress + Moodle + Vue
+- Host **1 WordPress site by default**
+- Moodle LMS endpoint for courses and learning content
+- Vue frontend endpoint for SPA experiences
 - Isolated networks & databases with persistent volumes
-- Easy to add more sites
 
 ### 🧑‍💻 Developer-Friendly APIs
 - `nodeapi.<domain>` → Node.js Express
@@ -72,9 +73,9 @@ A production-ready Docker hosting stack for Ubuntu 22.04+ that bundles Traefik, 
 1. Point the following subdomains to your server’s public IP (A records):
    ```
    panel.<domain>    → VPS IP (Portainer)
-   blog1.<domain>    → VPS IP (WordPress 1)
-   blog2.<domain>    → VPS IP (WordPress 2)
-   blog3.<domain>    → VPS IP (WordPress 3)
+   blog.<domain>     → VPS IP (WordPress)
+   moodle.<domain>   → VPS IP (Moodle)
+   app.<domain>      → VPS IP (Vue frontend)
    monitor.<domain>  → VPS IP (Netdata)
    nodeapi.<domain>  → VPS IP (Node Express API)
    api.<domain>      → VPS IP (Python FastAPI)
@@ -92,9 +93,9 @@ Internet
 └─────┬───────┘
       │
       ├── panel.<domain>   → Portainer (Docker UI)
-      ├── blog1.<domain>   → WordPress Site 1
-      ├── blog2.<domain>   → WordPress Site 2
-      ├── blog3.<domain>   → WordPress Site 3
+      ├── blog.<domain>    → WordPress Site
+      ├── moodle.<domain>  → Moodle LMS
+      ├── app.<domain>     → Vue Frontend
       ├── monitor.<domain> → Netdata Dashboard
       ├── nodeapi.<domain> → Node.js API
       └── api.<domain>     → Python FastAPI
@@ -108,20 +109,49 @@ Internet
 | Traefik dashboard  | `https://monitor.<domain>/traefik`     | —                               | Protected by the sample basic-auth hash in `docker-compose.yml`; replace with your own `htpasswd` output. |
 | Netdata            | `https://monitor.<domain>/netdata`     | `http://localhost:19999`        | `netdata-strip` middleware trims `/netdata` before forwarding. |
 | Monitoring landing | `https://monitor.<domain>/`            | —                               | Simple nginx site with shortcuts to Netdata and Traefik. |
-| WordPress #1       | `https://blog1.<domain>`               | `http://<server-ip>:8081`       | Direct ports are for testing without DNS/SSL. |
-| WordPress #2       | `https://blog2.<domain>`               | `http://<server-ip>:8082`       | Direct ports are for testing without DNS/SSL. |
-| WordPress #3       | `https://blog3.<domain>`               | `http://<server-ip>:8083`       | Direct ports are for testing without DNS/SSL. |
+| WordPress          | `https://blog.<domain>`                | `http://<server-ip>:8081`       | Direct port is for testing without DNS/SSL. |
+| Moodle             | `https://moodle.<domain>`              | —                               | Served only through Traefik. |
+| Vue frontend       | `https://app.<domain>`                 | —                               | Served only through Traefik. |
 | Node API           | `https://nodeapi.<domain>`             | —                               | Served only through Traefik. |
 | Python FastAPI     | `https://api.<domain>`                 | —                               | Served only through Traefik. |
 
 Use these direct host ports when DNS is unavailable or while testing locally; production traffic should still flow through Traefik for TLS.
 
-## 📰 WordPress Sites
+## 📰 WordPress Site
 
-- Default sites: `blog1.<domain>`, `blog2.<domain>`, `blog3.<domain>`
-- Each site has its own MariaDB container, WordPress container, isolated network, and persistent volumes.
-- To add a new site, duplicate a WordPress block in `docker-compose.yml` (e.g., copy `wp3` to create `wp4`) and adjust the subdomain, database, and labels.
-- Direct, no-domain access for testing is available on the host at `http://<server-ip>:8081`, `:8082`, and `:8083` for WordPress 1–3 respectively.
+- Default site: `blog.<domain>`
+- MariaDB + WordPress containers with isolated network and persistent volumes.
+- To add another site, duplicate the WordPress block in `docker-compose.yml` and adjust the subdomain, database name, and labels.
+- Direct, no-domain access for testing is available on the host at `http://<server-ip>:8081`.
+
+## 🎓 Moodle
+
+- Default site: `moodle.<domain>` served through Traefik.
+- Data persists to the Moodle data directory (`/var/www/moodledata` inside the container) and the database volume.
+- Default credentials: none provided; create the admin user during the Moodle web installer (choose a strong password).
+- Setup from source image:
+  ```bash
+  docker compose exec moodle php admin/cli/checks.php
+  docker compose exec moodle php admin/cli/maintenance.php --enable
+  docker compose exec moodle php admin/cli/maintenance.php --disable
+  ```
+  Use the CLI checks to confirm extensions and permissions before first login.
+
+## 🌐 Vue Frontend Endpoint
+
+- Default site: `app.<domain>` routed via Traefik.
+- Develop locally:
+  ```bash
+  cd vue-app
+  npm install
+  npm run dev -- --host --port 5173
+  ```
+- Build for production:
+  ```bash
+  npm run build
+  ```
+- Default credentials: none; the dev server ships without authentication.
+- The Vite dev server listens on port **5173**; production assets output to `vue-app/dist` and can be served by your Traefik route.
 
 ## 🧑‍💻 API Endpoints
 
@@ -159,6 +189,31 @@ Use these direct host ports when DNS is unavailable or while testing locally; pr
 - Direct Netdata container health check (from host): `curl http://localhost:19999/api/v1/info`
 
 The monitoring host keeps all tooling on a single domain using `PathPrefix` routes. StripPrefix middlewares remove `/netdata` and `/traefik` before forwarding to the respective services, so internal apps still see root-relative paths.
+
+## 🧪 How to Use the Stack (quick walkthrough)
+
+1. **Start services**
+   ```bash
+   docker compose up -d
+   ```
+2. **Check container states**
+   ```bash
+   docker compose ps
+   ```
+3. **Health checks by service**
+   - Traefik: `docker inspect --format='{{json .State.Health}}' traefik`
+   - Portainer: visit `https://panel.<domain>` or check `docker logs portainer`
+   - WordPress: `curl -f http://localhost:8081/wp-login.php`
+   - Moodle: `docker compose exec moodle php admin/cli/checks.php`
+   - Vue frontend: hit the Vite dev server at `http://localhost:5173/` when developing; in production verify `https://app.<domain>`
+   - Netdata: `curl http://localhost:19999/api/v1/info`
+   - Node API: `curl https://nodeapi.<domain>/`
+   - Python FastAPI: `curl https://api.<domain>/`
+4. **Troubleshooting tips**
+   - If certificates fail, ensure DNS A records exist and ports 80/443 are open.
+   - Restart any unhealthy container: `docker compose restart <service>`.
+   - Clear Vite dev cache if builds look stale: `rm -rf vue-app/node_modules/.vite` then rerun `npm run dev`.
+   - Use `docker logs -f <service>` to tail logs; `docker compose ps --status=exited` surfaces crashed services.
 
 ## 🧰 Useful Commands
 

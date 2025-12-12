@@ -1,6 +1,6 @@
 # 🐳 Modern Docker Hosting Stack (Traefik + WordPress + APIs + Monitoring)
 
-A production-ready Docker hosting stack for Ubuntu 22.04+ that bundles Traefik, Portainer, three WordPress sites, Node.js and Python API templates, and Netdata monitoring. Secrets stay out of Git, certificates are issued automatically, and everything lives behind a hardened reverse proxy.
+A production-ready Docker hosting stack for Ubuntu 22.04+ that bundles Traefik, Portainer, a WordPress site, Node.js and Python API templates, and Netdata monitoring. Secrets stay out of Git, certificates are issued automatically, and everything lives behind a hardened reverse proxy.
 
 ## 🚀 Features
 
@@ -15,10 +15,10 @@ A production-ready Docker hosting stack for Ubuntu 22.04+ that bundles Traefik, 
 - Every subdomain routed through Traefik
 - All traffic forced through HTTPS
 
-### 📰 WordPress Multi-Site Support
-- Host **3 WordPress sites by default**
-- Isolated networks & databases with persistent volumes
-- Easy to add more sites
+### 📰 WordPress Hosting
+- Host **1 WordPress site by default**
+- Isolated network & database with persistent volumes
+- Easy to add more sites if desired
 
 ### 🧑‍💻 Developer-Friendly APIs
 - `nodeapi.<domain>` → Node.js Express
@@ -93,9 +93,7 @@ Internet
 └─────┬───────┘
       │
       ├── panel.<domain>   → Portainer (Docker UI)
-      ├── blog1.<domain>   → WordPress Site 1
-      ├── blog2.<domain>   → WordPress Site 2
-      ├── blog3.<domain>   → WordPress Site 3
+      ├── blog1.<domain>   → WordPress
       ├── monitor.<domain> → Netdata Dashboard
       ├── nodeapi.<domain> → Node.js API
       └── api.<domain>     → Python FastAPI
@@ -113,6 +111,7 @@ Internet
 | WordPress #2       | `https://blog2.<domain>`               | `http://<server-ip>:8082`       | Direct ports are for testing without DNS/SSL. |
 | WordPress #3       | `https://blog3.<domain>`               | `http://<server-ip>:8083`       | Direct ports are for testing without DNS/SSL. |
 | Moodle             | `https://moodle.<domain>`              | `http://<server-ip>:8084`       | Traefik handles TLS; host port is for smoke-testing. |
+| WordPress          | `https://blog1.<domain>`               | `http://<server-ip>:8081`       | Direct ports are for testing without DNS/SSL. |
 | Node API           | `https://nodeapi.<domain>`             | —                               | Served only through Traefik. |
 | Python FastAPI     | `https://api.<domain>`                 | —                               | Served only through Traefik. |
 
@@ -120,10 +119,10 @@ Use these direct host ports when DNS is unavailable or while testing locally; pr
 
 ## 📰 WordPress Sites
 
-- Default sites: `blog1.<domain>`, `blog2.<domain>`, `blog3.<domain>`
-- Each site has its own MariaDB container, WordPress container, isolated network, and persistent volumes.
-- To add a new site, duplicate a WordPress block in `docker-compose.yml` (e.g., copy `wp3` to create `wp4`) and adjust the subdomain, database, and labels.
-- Direct, no-domain access for testing is available on the host at `http://<server-ip>:8081`, `:8082`, and `:8083` for WordPress 1–3 respectively.
+- Default site: `blog1.<domain>`
+- The site has its own MariaDB container, WordPress container, isolated network, and persistent volumes.
+- To add a new site, duplicate the WordPress block in `docker-compose.yml` (e.g., copy `wp1` to create `wp2`) and adjust the subdomain, database, and labels.
+- Direct, no-domain access for testing is available on the host at `http://<server-ip>:8081`.
 
 ## 🎓 Moodle LMS
 

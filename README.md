@@ -8,7 +8,7 @@ A production-ready Docker hosting stack for Ubuntu 22.04+ that bundles Traefik, 
 - No passwords or secrets in repo (.env generated at runtime)
 - UFW firewall + Fail2Ban hardening script
 - Optional Cloudflare compatibility
-- Traefik dashboard disabled by default (configurable in `traefik/traefik.yml`)
+- Traefik dashboard gated by basic auth at `https://monitor.<domain>/traefik`
 
 ### 🌍 Domain & SSL
 - Automatic Let’s Encrypt certificates
@@ -100,11 +100,28 @@ Internet
       └── api.<domain>     → Python FastAPI
 ```
 
+## 🔎 Access points (domains and direct host ports)
+
+| Service            | Traefik route                          | No-domain / direct access       | Notes |
+| ------------------ | -------------------------------------- | ------------------------------- | ----- |
+| Portainer          | `https://panel.<domain>`               | `https://<server-ip>:9443`      | 9443 uses Portainer’s bundled TLS cert; Traefik route stays on 443. |
+| Traefik dashboard  | `https://monitor.<domain>/traefik`     | —                               | Protected by the sample basic-auth hash in `docker-compose.yml`; replace with your own `htpasswd` output. |
+| Netdata            | `https://monitor.<domain>/netdata`     | `http://localhost:19999`        | `netdata-strip` middleware trims `/netdata` before forwarding. |
+| Monitoring landing | `https://monitor.<domain>/`            | —                               | Simple nginx site with shortcuts to Netdata and Traefik. |
+| WordPress #1       | `https://blog1.<domain>`               | `http://<server-ip>:8081`       | Direct ports are for testing without DNS/SSL. |
+| WordPress #2       | `https://blog2.<domain>`               | `http://<server-ip>:8082`       | Direct ports are for testing without DNS/SSL. |
+| WordPress #3       | `https://blog3.<domain>`               | `http://<server-ip>:8083`       | Direct ports are for testing without DNS/SSL. |
+| Node API           | `https://nodeapi.<domain>`             | —                               | Served only through Traefik. |
+| Python FastAPI     | `https://api.<domain>`                 | —                               | Served only through Traefik. |
+
+Use these direct host ports when DNS is unavailable or while testing locally; production traffic should still flow through Traefik for TLS.
+
 ## 📰 WordPress Sites
 
 - Default sites: `blog1.<domain>`, `blog2.<domain>`, `blog3.<domain>`
 - Each site has its own MariaDB container, WordPress container, isolated network, and persistent volumes.
 - To add a new site, duplicate a WordPress block in `docker-compose.yml` (e.g., copy `wp3` to create `wp4`) and adjust the subdomain, database, and labels.
+- Direct, no-domain access for testing is available on the host at `http://<server-ip>:8081`, `:8082`, and `:8083` for WordPress 1–3 respectively.
 
 ## 🧑‍💻 API Endpoints
 
@@ -136,7 +153,12 @@ Internet
 
 ## 📊 Monitoring
 
-Netdata is available at `https://monitor.<domain>` and provides CPU, memory, disk I/O, network traffic, and container metrics.
+- Landing page: `https://monitor.<domain>/` (links to Netdata and Traefik)
+- Netdata: `https://monitor.<domain>/netdata`
+- Traefik dashboard: `https://monitor.<domain>/traefik`
+- Direct Netdata container health check (from host): `curl http://localhost:19999/api/v1/info`
+
+The monitoring host keeps all tooling on a single domain using `PathPrefix` routes. StripPrefix middlewares remove `/netdata` and `/traefik` before forwarding to the respective services, so internal apps still see root-relative paths.
 
 ## 🧰 Useful Commands
 

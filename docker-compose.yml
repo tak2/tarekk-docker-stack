@@ -41,6 +41,15 @@ services:
       - "./traefik/letsencrypt:/letsencrypt"
     networks:
       - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`${MONITOR_SUB}.${DOMAIN}`) && PathPrefix(`/traefik`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls.certresolver=le"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.middlewares=traefik-strip,traefik-auth"
+      - "traefik.http.middlewares.traefik-strip.stripprefix.prefixes=/traefik"
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$H6uskkkW$$IgXLP6ewTrSuBkTrqE8wj/"
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 30s
@@ -55,6 +64,8 @@ services:
     image: portainer/portainer-ce
     container_name: portainer
     command: -H unix:///var/run/docker.sock
+    ports:
+      - "9443:9443"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "portainer_data:/data"
@@ -97,6 +108,8 @@ services:
       WORDPRESS_DB_NAME: wp1_db
     volumes:
       - "wp1_wp_data:/var/www/html"
+    ports:
+      - "8081:80"
     networks:
       - proxy
       - wp1_net
@@ -142,6 +155,8 @@ services:
       WORDPRESS_DB_NAME: wp2_db
     volumes:
       - "wp2_wp_data:/var/www/html"
+    ports:
+      - "8082:80"
     networks:
       - proxy
       - wp2_net
@@ -187,6 +202,8 @@ services:
       WORDPRESS_DB_NAME: wp3_db
     volumes:
       - "wp3_wp_data:/var/www/html"
+    ports:
+      - "8083:80"
     networks:
       - proxy
       - wp3_net
@@ -206,6 +223,21 @@ services:
   # ==========================
   # Netdata Monitoring
   # ==========================
+  landing:
+    image: nginx:alpine
+    container_name: landing
+    volumes:
+      - "./landing:/usr/share/nginx/html:ro"
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.landing.rule=Host(`${MONITOR_SUB}.${DOMAIN}`) && PathPrefix(`/`)"
+      - "traefik.http.routers.landing.entrypoints=websecure"
+      - "traefik.http.routers.landing.tls.certresolver=le"
+      - "traefik.http.services.landing.loadbalancer.server.port=80"
+    restart: unless-stopped
+
   netdata:
     image: netdata/netdata
     container_name: netdata
@@ -221,9 +253,11 @@ services:
       - proxy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.netdata.rule=Host(`${MONITOR_SUB}.${DOMAIN}`)"
+      - "traefik.http.routers.netdata.rule=Host(`${MONITOR_SUB}.${DOMAIN}`) && PathPrefix(`/netdata`)"
       - "traefik.http.routers.netdata.entrypoints=websecure"
       - "traefik.http.routers.netdata.tls.certresolver=le"
+      - "traefik.http.routers.netdata.middlewares=netdata-strip"
+      - "traefik.http.middlewares.netdata-strip.stripprefix.prefixes=/netdata"
       - "traefik.http.services.netdata.loadbalancer.server.port=19999"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:19999/api/v1/info || exit 1"]

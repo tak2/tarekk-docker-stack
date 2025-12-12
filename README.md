@@ -1,4 +1,4 @@
-# 🐳 Modern Docker Hosting Stack (Traefik + WordPress + APIs + Monitoring)
+# 🐳 Modern Docker Hosting Stack (Traefik + WordPress + Moodle + Vue + APIs)
 
 A production-ready Docker hosting stack for Ubuntu 22.04+ that bundles Traefik, Portainer, a WordPress site, Node.js and Python API templates, and Netdata monitoring. Secrets stay out of Git, certificates are issued automatically, and everything lives behind a hardened reverse proxy.
 
@@ -114,7 +114,7 @@ Internet
 
 Use these direct host ports when DNS is unavailable or while testing locally; production traffic should still flow through Traefik for TLS.
 
-## 📰 WordPress Sites
+## 📰 WordPress Site
 
 - Default site: `blog1.<domain>`
 - The site has its own MariaDB container, WordPress container, isolated network, and persistent volumes.
@@ -196,6 +196,31 @@ Once you have a production build output, you can copy it to another service (e.g
 - Direct Netdata container health check (from host): `curl http://localhost:19999/api/v1/info`
 
 The monitoring host keeps all tooling on a single domain using `PathPrefix` routes. StripPrefix middlewares remove `/netdata` and `/traefik` before forwarding to the respective services, so internal apps still see root-relative paths.
+
+## 🧪 How to Use the Stack (quick walkthrough)
+
+1. **Start services**
+   ```bash
+   docker compose up -d
+   ```
+2. **Check container states**
+   ```bash
+   docker compose ps
+   ```
+3. **Health checks by service**
+   - Traefik: `docker inspect --format='{{json .State.Health}}' traefik`
+   - Portainer: visit `https://panel.<domain>` or check `docker logs portainer`
+   - WordPress: `curl -f http://localhost:8081/wp-login.php`
+   - Moodle: `docker compose exec moodle php admin/cli/checks.php`
+   - Vue frontend: hit the Vite dev server at `http://localhost:5173/` when developing; in production verify `https://app.<domain>`
+   - Netdata: `curl http://localhost:19999/api/v1/info`
+   - Node API: `curl https://nodeapi.<domain>/`
+   - Python FastAPI: `curl https://api.<domain>/`
+4. **Troubleshooting tips**
+   - If certificates fail, ensure DNS A records exist and ports 80/443 are open.
+   - Restart any unhealthy container: `docker compose restart <service>`.
+   - Clear Vite dev cache if builds look stale: `rm -rf vue-app/node_modules/.vite` then rerun `npm run dev`.
+   - Use `docker logs -f <service>` to tail logs; `docker compose ps --status=exited` surfaces crashed services.
 
 ## 🧰 Useful Commands
 

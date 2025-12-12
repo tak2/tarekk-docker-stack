@@ -13,6 +13,8 @@ networks:
 volumes:
   portainer_data:
 
+  vue_node_modules:
+
   wp1_db_data:
   wp1_wp_data:
 
@@ -285,6 +287,32 @@ services:
       interval: 60s
       timeout: 10s
       retries: 3
+    restart: unless-stopped
+
+  # ==========================
+  # Vue + Vite Dev Server
+  # ==========================
+  vue-dev:
+    image: node:20-alpine
+    container_name: vue-dev
+    working_dir: /workspace
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+    volumes:
+      - ./:/workspace
+      - vue_node_modules:/workspace/node_modules
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5173
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vue-dev.rule=Host(`${VUE_SUB}.${DOMAIN}`)"
+      - "traefik.http.routers.vue-dev.entrypoints=websecure"
+      - "traefik.http.routers.vue-dev.tls.certresolver=le"
+      - "traefik.http.services.vue-dev.loadbalancer.server.port=5173"
+    profiles:
+      - dev
     restart: unless-stopped
 
   # ==========================

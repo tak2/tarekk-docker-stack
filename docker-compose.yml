@@ -5,22 +5,14 @@ networks:
     external: true
   wp1_net:
     driver: bridge
-  wp2_net:
-    driver: bridge
-  wp3_net:
-    driver: bridge
 
 volumes:
   portainer_data:
 
+  vue_node_modules:
+
   wp1_db_data:
   wp1_wp_data:
-
-  wp2_db_data:
-  wp2_wp_data:
-
-  wp3_db_data:
-  wp3_wp_data:
 
 services:
 
@@ -127,100 +119,6 @@ services:
     restart: unless-stopped
 
   # ==========================
-  # WordPress Site #2
-  # ==========================
-  wp2_db:
-    image: mariadb:10.11
-    container_name: wp2_db
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: wp2_db
-      MYSQL_USER: wp2_user
-      MYSQL_PASSWORD: ${WP_DB_PASSWORD}
-    volumes:
-      - "wp2_db_data:/var/lib/mysql"
-    networks:
-      - wp2_net
-    restart: unless-stopped
-
-  wp2:
-    image: wordpress:php8.2-apache
-    container_name: wp2
-    depends_on:
-      - wp2_db
-    environment:
-      WORDPRESS_DB_HOST: wp2_db:3306
-      WORDPRESS_DB_USER: wp2_user
-      WORDPRESS_DB_PASSWORD: ${WP_DB_PASSWORD}
-      WORDPRESS_DB_NAME: wp2_db
-    volumes:
-      - "wp2_wp_data:/var/www/html"
-    ports:
-      - "8082:80"
-    networks:
-      - proxy
-      - wp2_net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.wp2.rule=Host(`${BLOG2_SUB}.${DOMAIN}`)"
-      - "traefik.http.routers.wp2.entrypoints=websecure"
-      - "traefik.http.routers.wp2.tls.certresolver=le"
-      - "traefik.http.services.wp2.loadbalancer.server.port=80"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost/wp-login.php || exit 1"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
-
-  # ==========================
-  # WordPress Site #3
-  # ==========================
-  wp3_db:
-    image: mariadb:10.11
-    container_name: wp3_db
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: wp3_db
-      MYSQL_USER: wp3_user
-      MYSQL_PASSWORD: ${WP_DB_PASSWORD}
-    volumes:
-      - "wp3_db_data:/var/lib/mysql"
-    networks:
-      - wp3_net
-    restart: unless-stopped
-
-  wp3:
-    image: wordpress:php8.2-apache
-    container_name: wp3
-    depends_on:
-      - wp3_db
-    environment:
-      WORDPRESS_DB_HOST: wp3_db:3306
-      WORDPRESS_DB_USER: wp3_user
-      WORDPRESS_DB_PASSWORD: ${WP_DB_PASSWORD}
-      WORDPRESS_DB_NAME: wp3_db
-    volumes:
-      - "wp3_wp_data:/var/www/html"
-    ports:
-      - "8083:80"
-    networks:
-      - proxy
-      - wp3_net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.wp3.rule=Host(`${BLOG3_SUB}.${DOMAIN}`)"
-      - "traefik.http.routers.wp3.entrypoints=websecure"
-      - "traefik.http.routers.wp3.tls.certresolver=le"
-      - "traefik.http.services.wp3.loadbalancer.server.port=80"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost/wp-login.php || exit 1"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
-
-  # ==========================
   # Netdata Monitoring
   # ==========================
   landing:
@@ -285,6 +183,32 @@ services:
       interval: 60s
       timeout: 10s
       retries: 3
+    restart: unless-stopped
+
+  # ==========================
+  # Vue + Vite Dev Server
+  # ==========================
+  vue-dev:
+    image: node:20-alpine
+    container_name: vue-dev
+    working_dir: /workspace
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+    volumes:
+      - ./:/workspace
+      - vue_node_modules:/workspace/node_modules
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5173
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vue-dev.rule=Host(`${VUE_SUB}.${DOMAIN}`)"
+      - "traefik.http.routers.vue-dev.entrypoints=websecure"
+      - "traefik.http.routers.vue-dev.tls.certresolver=le"
+      - "traefik.http.services.vue-dev.loadbalancer.server.port=5173"
+    profiles:
+      - dev
     restart: unless-stopped
 
   # ==========================

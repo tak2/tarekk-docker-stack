@@ -19,12 +19,6 @@ PANEL_SUB=${PANEL_SUB:-panel}
 read -p "Enter subdomain for WordPress site #1 [blog1]: " BLOG1_SUB
 BLOG1_SUB=${BLOG1_SUB:-blog1}
 
-read -p "Enter subdomain for WordPress site #2 [blog2]: " BLOG2_SUB
-BLOG2_SUB=${BLOG2_SUB:-blog2}
-
-read -p "Enter subdomain for WordPress site #3 [blog3]: " BLOG3_SUB
-BLOG3_SUB=${BLOG3_SUB:-blog3}
-
 read -p "Enter subdomain for Netdata monitor [monitor]: " MONITOR_SUB
 MONITOR_SUB=${MONITOR_SUB:-monitor}
 
@@ -47,8 +41,6 @@ cat > .env <<EOF
 DOMAIN=$DOMAIN
 PANEL_SUB=$PANEL_SUB
 BLOG1_SUB=$BLOG1_SUB
-BLOG2_SUB=$BLOG2_SUB
-BLOG3_SUB=$BLOG3_SUB
 MONITOR_SUB=$MONITOR_SUB
 NODE_SUB=$NODE_SUB
 PY_SUB=$PY_SUB
@@ -99,8 +91,6 @@ echo "Next steps:"
 echo "1) Configure DNS for:"
 echo "   - $PANEL_SUB.$DOMAIN"
 echo "   - $BLOG1_SUB.$DOMAIN"
-echo "   - $BLOG2_SUB.$DOMAIN"
-echo "   - $BLOG3_SUB.$DOMAIN"
 echo "   - $MONITOR_SUB.$DOMAIN"
 echo "   - $NODE_SUB.$DOMAIN"
 echo "   - $PY_SUB.$DOMAIN"

@@ -5,6 +5,12 @@ networks:
     external: true
   wp1_net:
     driver: bridge
+  wp2_net:
+    driver: bridge
+  wp3_net:
+    driver: bridge
+  moodle_net:
+    driver: bridge
 
 volumes:
   portainer_data:
@@ -13,6 +19,16 @@ volumes:
 
   wp1_db_data:
   wp1_wp_data:
+
+  wp2_db_data:
+  wp2_wp_data:
+
+  wp3_db_data:
+  wp3_wp_data:
+
+  moodle_db_data:
+  moodle_app_data:
+  moodle_moodledata:
 
 services:
 
@@ -230,4 +246,64 @@ services:
       interval: 60s
       timeout: 10s
       retries: 3
+    restart: unless-stopped
+
+  # ==========================
+  # Moodle LMS
+  # ==========================
+  moodle_db:
+    image: mariadb:10.11
+    container_name: moodle_db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MOODLE_DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MOODLE_DB_NAME}
+      MYSQL_USER: ${MOODLE_DB_USER}
+      MYSQL_PASSWORD: ${MOODLE_DB_PASSWORD}
+    volumes:
+      - "moodle_db_data:/var/lib/mysql"
+    networks:
+      - moodle_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  moodle:
+    image: bitnami/moodle:4
+    container_name: moodle
+    depends_on:
+      moodle_db:
+        condition: service_healthy
+    environment:
+      MOODLE_DATABASE_TYPE: mariadb
+      MOODLE_DATABASE_HOST: moodle_db
+      MOODLE_DATABASE_PORT_NUMBER: 3306
+      MOODLE_DATABASE_NAME: ${MOODLE_DB_NAME}
+      MOODLE_DATABASE_USER: ${MOODLE_DB_USER}
+      MOODLE_DATABASE_PASSWORD: ${MOODLE_DB_PASSWORD}
+      MOODLE_USERNAME: ${MOODLE_ADMIN_USER}
+      MOODLE_PASSWORD: ${MOODLE_ADMIN_PASSWORD}
+      MOODLE_EMAIL: ${MOODLE_ADMIN_EMAIL}
+      MOODLE_SITE_NAME: ${MOODLE_SITE_NAME}
+    volumes:
+      - "moodle_app_data:/bitnami/moodle"
+      - "moodle_moodledata:/bitnami/moodledata"
+    ports:
+      - "8084:8080"
+    networks:
+      - proxy
+      - moodle_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.moodle.rule=Host(`${MOODLE_SUB}.${DOMAIN}`)"
+      - "traefik.http.routers.moodle.entrypoints=websecure"
+      - "traefik.http.routers.moodle.tls.certresolver=le"
+      - "traefik.http.services.moodle.loadbalancer.server.port=8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/login/index.php || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
     restart: unless-stopped

@@ -75,6 +75,7 @@ A production-ready Docker hosting stack for Ubuntu 22.04+ that bundles Traefik, 
    blog1.<domain>    → VPS IP (WordPress 1)
    blog2.<domain>    → VPS IP (WordPress 2)
    blog3.<domain>    → VPS IP (WordPress 3)
+   moodle.<domain>   → VPS IP (Moodle LMS)
    monitor.<domain>  → VPS IP (Netdata)
    nodeapi.<domain>  → VPS IP (Node Express API)
    api.<domain>      → VPS IP (Python FastAPI)
@@ -111,6 +112,7 @@ Internet
 | WordPress #1       | `https://blog1.<domain>`               | `http://<server-ip>:8081`       | Direct ports are for testing without DNS/SSL. |
 | WordPress #2       | `https://blog2.<domain>`               | `http://<server-ip>:8082`       | Direct ports are for testing without DNS/SSL. |
 | WordPress #3       | `https://blog3.<domain>`               | `http://<server-ip>:8083`       | Direct ports are for testing without DNS/SSL. |
+| Moodle             | `https://moodle.<domain>`              | `http://<server-ip>:8084`       | Traefik handles TLS; host port is for smoke-testing. |
 | Node API           | `https://nodeapi.<domain>`             | —                               | Served only through Traefik. |
 | Python FastAPI     | `https://api.<domain>`                 | —                               | Served only through Traefik. |
 
@@ -122,6 +124,15 @@ Use these direct host ports when DNS is unavailable or while testing locally; pr
 - Each site has its own MariaDB container, WordPress container, isolated network, and persistent volumes.
 - To add a new site, duplicate a WordPress block in `docker-compose.yml` (e.g., copy `wp3` to create `wp4`) and adjust the subdomain, database, and labels.
 - Direct, no-domain access for testing is available on the host at `http://<server-ip>:8081`, `:8082`, and `:8083` for WordPress 1–3 respectively.
+
+## 🎓 Moodle LMS
+
+- Hostname: `moodle.<domain>` (set `MOODLE_SUB` in `.env`/setup prompt).
+- Default admin bootstrap values come from `.env` (`MOODLE_ADMIN_USER`, `MOODLE_ADMIN_PASSWORD`, `MOODLE_ADMIN_EMAIL`). Update them before the first start; Moodle creates the account during initialization.
+- Data persistence:
+  - `moodle_app_data` → `/bitnami/moodle` (application files)
+  - `moodle_moodledata` → `/bitnami/moodledata` (file uploads and course data)
+- Direct, no-domain access for testing: `http://<server-ip>:8084` (Traefik terminates HTTPS for the public route).
 
 ## 🧑‍💻 API Endpoints
 

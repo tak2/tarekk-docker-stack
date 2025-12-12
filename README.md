@@ -126,6 +126,7 @@ Use these direct host ports when DNS is unavailable or while testing locally; pr
 ### Node API
 - Location: `/api-node/`
 - URL: `https://nodeapi.<domain>/`
+- Health check: `https://nodeapi.<domain>/health` returns status, uptime, and start time metadata.
 - Default response:
   ```json
   {
@@ -137,6 +138,7 @@ Use these direct host ports when DNS is unavailable or while testing locally; pr
 ### Python FastAPI
 - Location: `/api-python/`
 - URL: `https://api.<domain>/`
+- Health check: `https://api.<domain>/health` returns status, uptime, and start time metadata.
 - Install dependencies with the pinned requirements file:
   ```bash
   pip install -r api-python/requirements.txt

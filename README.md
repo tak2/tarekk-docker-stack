@@ -54,9 +54,9 @@ A production-ready Docker hosting stack for Ubuntu 22.04+ that bundles Traefik, 
 
 3. **(Optional) Apply security hardening**
    ```bash
-   sudo ./security-harden.sh
-   ```
-   See [Security Hardening](#-security-hardening) for details about what this script changes and links to upstream documentation.
+ sudo ./security-harden.sh
+  ```
+  See [Security Hardening](#-security-hardening) for details about what this script changes and links to upstream documentation.
 
 4. **Start all services**
    ```bash
@@ -212,6 +212,12 @@ The monitoring host keeps all tooling on a single domain using `PathPrefix` rout
   ```bash
   docker compose down
   ```
+- Upgrade images and rebuild local services:
+  ```bash
+  sudo ./upgrade.sh
+  ```
+  The script asks whether to stop and delete current containers before recreating the stack, pulls newer images, rebuilds the
+  Node.js and Python API services, and starts everything with the latest versions.
 
 ## 🔐 Security Hardening
 

@@ -9,9 +9,13 @@ networks:
     driver: bridge
   wp3_net:
     driver: bridge
+  moodle_net:
+    driver: bridge
 
 volumes:
   portainer_data:
+
+  vue_node_modules:
 
   wp1_db_data:
   wp1_wp_data:
@@ -21,6 +25,10 @@ volumes:
 
   wp3_db_data:
   wp3_wp_data:
+
+  moodle_db_data:
+  moodle_app_data:
+  moodle_moodledata:
 
 services:
 
@@ -41,6 +49,15 @@ services:
       - "./traefik/letsencrypt:/letsencrypt"
     networks:
       - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`${MONITOR_SUB}.${DOMAIN}`) && PathPrefix(`/traefik`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls.certresolver=le"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.middlewares=traefik-strip,traefik-auth"
+      - "traefik.http.middlewares.traefik-strip.stripprefix.prefixes=/traefik"
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$H6uskkkW$$IgXLP6ewTrSuBkTrqE8wj/"
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 30s
@@ -55,6 +72,8 @@ services:
     image: portainer/portainer-ce
     container_name: portainer
     command: -H unix:///var/run/docker.sock
+    ports:
+      - "9443:9443"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "portainer_data:/data"
@@ -97,6 +116,8 @@ services:
       WORDPRESS_DB_NAME: wp1_db
     volumes:
       - "wp1_wp_data:/var/www/html"
+    ports:
+      - "8081:80"
     networks:
       - proxy
       - wp1_net
@@ -114,98 +135,23 @@ services:
     restart: unless-stopped
 
   # ==========================
-  # WordPress Site #2
-  # ==========================
-  wp2_db:
-    image: mariadb:10.11
-    container_name: wp2_db
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: wp2_db
-      MYSQL_USER: wp2_user
-      MYSQL_PASSWORD: ${WP_DB_PASSWORD}
-    volumes:
-      - "wp2_db_data:/var/lib/mysql"
-    networks:
-      - wp2_net
-    restart: unless-stopped
-
-  wp2:
-    image: wordpress:php8.2-apache
-    container_name: wp2
-    depends_on:
-      - wp2_db
-    environment:
-      WORDPRESS_DB_HOST: wp2_db:3306
-      WORDPRESS_DB_USER: wp2_user
-      WORDPRESS_DB_PASSWORD: ${WP_DB_PASSWORD}
-      WORDPRESS_DB_NAME: wp2_db
-    volumes:
-      - "wp2_wp_data:/var/www/html"
-    networks:
-      - proxy
-      - wp2_net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.wp2.rule=Host(`${BLOG2_SUB}.${DOMAIN}`)"
-      - "traefik.http.routers.wp2.entrypoints=websecure"
-      - "traefik.http.routers.wp2.tls.certresolver=le"
-      - "traefik.http.services.wp2.loadbalancer.server.port=80"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost/wp-login.php || exit 1"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
-
-  # ==========================
-  # WordPress Site #3
-  # ==========================
-  wp3_db:
-    image: mariadb:10.11
-    container_name: wp3_db
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: wp3_db
-      MYSQL_USER: wp3_user
-      MYSQL_PASSWORD: ${WP_DB_PASSWORD}
-    volumes:
-      - "wp3_db_data:/var/lib/mysql"
-    networks:
-      - wp3_net
-    restart: unless-stopped
-
-  wp3:
-    image: wordpress:php8.2-apache
-    container_name: wp3
-    depends_on:
-      - wp3_db
-    environment:
-      WORDPRESS_DB_HOST: wp3_db:3306
-      WORDPRESS_DB_USER: wp3_user
-      WORDPRESS_DB_PASSWORD: ${WP_DB_PASSWORD}
-      WORDPRESS_DB_NAME: wp3_db
-    volumes:
-      - "wp3_wp_data:/var/www/html"
-    networks:
-      - proxy
-      - wp3_net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.wp3.rule=Host(`${BLOG3_SUB}.${DOMAIN}`)"
-      - "traefik.http.routers.wp3.entrypoints=websecure"
-      - "traefik.http.routers.wp3.tls.certresolver=le"
-      - "traefik.http.services.wp3.loadbalancer.server.port=80"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost/wp-login.php || exit 1"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
-
-  # ==========================
   # Netdata Monitoring
   # ==========================
+  landing:
+    image: nginx:alpine
+    container_name: landing
+    volumes:
+      - "./landing:/usr/share/nginx/html:ro"
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.landing.rule=Host(`${MONITOR_SUB}.${DOMAIN}`) && PathPrefix(`/`)"
+      - "traefik.http.routers.landing.entrypoints=websecure"
+      - "traefik.http.routers.landing.tls.certresolver=le"
+      - "traefik.http.services.landing.loadbalancer.server.port=80"
+    restart: unless-stopped
+
   netdata:
     image: netdata/netdata
     container_name: netdata
@@ -221,9 +167,11 @@ services:
       - proxy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.netdata.rule=Host(`${MONITOR_SUB}.${DOMAIN}`)"
+      - "traefik.http.routers.netdata.rule=Host(`${MONITOR_SUB}.${DOMAIN}`) && PathPrefix(`/netdata`)"
       - "traefik.http.routers.netdata.entrypoints=websecure"
       - "traefik.http.routers.netdata.tls.certresolver=le"
+      - "traefik.http.routers.netdata.middlewares=netdata-strip"
+      - "traefik.http.middlewares.netdata-strip.stripprefix.prefixes=/netdata"
       - "traefik.http.services.netdata.loadbalancer.server.port=19999"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:19999/api/v1/info || exit 1"]
@@ -247,10 +195,36 @@ services:
       - "traefik.http.routers.nodeapi.tls.certresolver=le"
       - "traefik.http.services.nodeapi.loadbalancer.server.port=3000"
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r=>{if(!r.ok){process.exit(1)}}).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>{if(!r.ok){process.exit(1)}}).catch(()=>process.exit(1))"]
       interval: 60s
       timeout: 10s
       retries: 3
+    restart: unless-stopped
+
+  # ==========================
+  # Vue + Vite Dev Server
+  # ==========================
+  vue-dev:
+    image: node:20-alpine
+    container_name: vue-dev
+    working_dir: /workspace
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+    volumes:
+      - ./:/workspace
+      - vue_node_modules:/workspace/node_modules
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5173
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vue-dev.rule=Host(`${VUE_SUB}.${DOMAIN}`)"
+      - "traefik.http.routers.vue-dev.entrypoints=websecure"
+      - "traefik.http.routers.vue-dev.tls.certresolver=le"
+      - "traefik.http.services.vue-dev.loadbalancer.server.port=5173"
+    profiles:
+      - dev
     restart: unless-stopped
 
   # ==========================
@@ -268,8 +242,68 @@ services:
       - "traefik.http.routers.pyapi.tls.certresolver=le"
       - "traefik.http.services.pyapi.loadbalancer.server.port=8000"
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://localhost:8000/').status==200 else 1)\""]
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)\""]
       interval: 60s
       timeout: 10s
       retries: 3
+    restart: unless-stopped
+
+  # ==========================
+  # Moodle LMS
+  # ==========================
+  moodle_db:
+    image: mariadb:10.11
+    container_name: moodle_db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MOODLE_DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MOODLE_DB_NAME}
+      MYSQL_USER: ${MOODLE_DB_USER}
+      MYSQL_PASSWORD: ${MOODLE_DB_PASSWORD}
+    volumes:
+      - "moodle_db_data:/var/lib/mysql"
+    networks:
+      - moodle_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  moodle:
+    image: bitnami/moodle:4
+    container_name: moodle
+    depends_on:
+      moodle_db:
+        condition: service_healthy
+    environment:
+      MOODLE_DATABASE_TYPE: mariadb
+      MOODLE_DATABASE_HOST: moodle_db
+      MOODLE_DATABASE_PORT_NUMBER: 3306
+      MOODLE_DATABASE_NAME: ${MOODLE_DB_NAME}
+      MOODLE_DATABASE_USER: ${MOODLE_DB_USER}
+      MOODLE_DATABASE_PASSWORD: ${MOODLE_DB_PASSWORD}
+      MOODLE_USERNAME: ${MOODLE_ADMIN_USER}
+      MOODLE_PASSWORD: ${MOODLE_ADMIN_PASSWORD}
+      MOODLE_EMAIL: ${MOODLE_ADMIN_EMAIL}
+      MOODLE_SITE_NAME: ${MOODLE_SITE_NAME}
+    volumes:
+      - "moodle_app_data:/bitnami/moodle"
+      - "moodle_moodledata:/bitnami/moodledata"
+    ports:
+      - "8084:8080"
+    networks:
+      - proxy
+      - moodle_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.moodle.rule=Host(`${MOODLE_SUB}.${DOMAIN}`)"
+      - "traefik.http.routers.moodle.entrypoints=websecure"
+      - "traefik.http.routers.moodle.tls.certresolver=le"
+      - "traefik.http.services.moodle.loadbalancer.server.port=8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/login/index.php || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
     restart: unless-stopped

@@ -4,7 +4,7 @@ log:
 accessLog: {}
 
 api:
-  dashboard: false
+  dashboard: true
   insecure: false
 
 ping:

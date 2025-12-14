@@ -73,7 +73,10 @@ A production-ready Docker hosting stack for Ubuntu 22.04+ that bundles Traefik, 
 1. Point the following subdomains to your server’s public IP (A records):
    ```
    panel.<domain>    → VPS IP (Portainer)
-   blog1.<domain>    → VPS IP (WordPress)
+   blog1.<domain>    → VPS IP (WordPress 1)
+   blog2.<domain>    → VPS IP (WordPress 2)
+   blog3.<domain>    → VPS IP (WordPress 3)
+   moodle.<domain>   → VPS IP (Moodle LMS)
    monitor.<domain>  → VPS IP (Netdata)
    nodeapi.<domain>  → VPS IP (Node Express API)
    api.<domain>      → VPS IP (Python FastAPI)
@@ -107,6 +110,10 @@ Internet
 | Traefik dashboard  | `https://monitor.<domain>/traefik`     | —                               | Protected by the sample basic-auth hash in `docker-compose.yml`; replace with your own `htpasswd` output. |
 | Netdata            | `https://monitor.<domain>/netdata`     | `http://localhost:19999`        | `netdata-strip` middleware trims `/netdata` before forwarding. |
 | Monitoring landing | `https://monitor.<domain>/`            | —                               | Simple nginx site with shortcuts to Netdata and Traefik. |
+| WordPress #1       | `https://blog1.<domain>`               | `http://<server-ip>:8081`       | Direct ports are for testing without DNS/SSL. |
+| WordPress #2       | `https://blog2.<domain>`               | `http://<server-ip>:8082`       | Direct ports are for testing without DNS/SSL. |
+| WordPress #3       | `https://blog3.<domain>`               | `http://<server-ip>:8083`       | Direct ports are for testing without DNS/SSL. |
+| Moodle             | `https://moodle.<domain>`              | `http://<server-ip>:8084`       | Traefik handles TLS; host port is for smoke-testing. |
 | WordPress          | `https://blog1.<domain>`               | `http://<server-ip>:8081`       | Direct ports are for testing without DNS/SSL. |
 | Node API           | `https://nodeapi.<domain>`             | —                               | Served only through Traefik. |
 | Vue + Vite dev     | `https://vue.<domain>`                 | —                               | Runs under the `dev` compose profile; Traefik forwards to the Vite dev server on port 5173. |
@@ -120,6 +127,15 @@ Use these direct host ports when DNS is unavailable or while testing locally; pr
 - The site has its own MariaDB container, WordPress container, isolated network, and persistent volumes.
 - To add a new site, duplicate the WordPress block in `docker-compose.yml` (e.g., copy `wp1` to create `wp2`) and adjust the subdomain, database, and labels.
 - Direct, no-domain access for testing is available on the host at `http://<server-ip>:8081`.
+
+## 🎓 Moodle LMS
+
+- Hostname: `moodle.<domain>` (set `MOODLE_SUB` in `.env`/setup prompt).
+- Default admin bootstrap values come from `.env` (`MOODLE_ADMIN_USER`, `MOODLE_ADMIN_PASSWORD`, `MOODLE_ADMIN_EMAIL`). Update them before the first start; Moodle creates the account during initialization.
+- Data persistence:
+  - `moodle_app_data` → `/bitnami/moodle` (application files)
+  - `moodle_moodledata` → `/bitnami/moodledata` (file uploads and course data)
+- Direct, no-domain access for testing: `http://<server-ip>:8084` (Traefik terminates HTTPS for the public route).
 
 ## 🧑‍💻 API Endpoints
 

@@ -271,7 +271,7 @@ services:
     restart: unless-stopped
 
   moodle:
-    image: bitnami/moodle:4
+    image: bitnami/moodle:latest
     container_name: moodle
     depends_on:
       moodle_db:

@@ -109,6 +109,14 @@ echo "Installing Docker Engine + Compose plugin..."
 apt update
 apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
+if ! command -v docker-compose >/dev/null 2>&1; then
+  if [ -x /usr/libexec/docker/cli-plugins/docker-compose ]; then
+    ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
+  elif [ -x /usr/lib/docker/cli-plugins/docker-compose ]; then
+    ln -s /usr/lib/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
+  fi
+fi
+
 echo "Enabling Docker..."
 systemctl enable docker
 systemctl restart docker

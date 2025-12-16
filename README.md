@@ -54,6 +54,8 @@ A production-ready Docker hosting stack for Ubuntu 22.04+ that bundles Traefik, 
    docker network create proxy
    ```
 
+   > **Note:** The setup script also creates a `docker-compose` shim that points to the Compose V2 plugin so either `docker compose` or `docker-compose` works. If you see a `docker-compose: not found` error, rerun the setup script to recreate the shim.
+
 3. **(Optional) Apply security hardening**
    ```bash
  sudo ./security-harden.sh

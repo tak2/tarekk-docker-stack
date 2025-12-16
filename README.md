@@ -26,8 +26,10 @@ A production-ready Docker hosting stack for Ubuntu 22.04+ that bundles Traefik, 
 - `vue.<domain>` → Vue + Vite dev server (profile-based)
 
 ### 📊 Monitoring
-- Netdata dashboard at `monitor.<domain>`
-- Real-time CPU, memory, disk, network, and Docker metrics
+- Netdata dashboard at `monitor.<domain>/netdata` (routed through Traefik)
+- Traefik dashboard at `monitor.<domain>/traefik` protected by sample basic auth (replace the hash in `docker-compose.yml`)
+- Monitoring landing page at `monitor.<domain>/` with quick links
+- Direct Netdata health check available on `http://localhost:19999/api/v1/info` (container port)
 
 ## 📦 Requirements
 
@@ -108,13 +110,12 @@ Internet
 | ------------------ | -------------------------------------- | ------------------------------- | ----- |
 | Portainer          | `https://panel.<domain>`               | `https://<server-ip>:9443`      | 9443 uses Portainer’s bundled TLS cert; Traefik route stays on 443. |
 | Traefik dashboard  | `https://monitor.<domain>/traefik`     | —                               | Protected by the sample basic-auth hash in `docker-compose.yml`; replace with your own `htpasswd` output. |
-| Netdata            | `https://monitor.<domain>/netdata`     | `http://localhost:19999`        | `netdata-strip` middleware trims `/netdata` before forwarding. |
-| Monitoring landing | `https://monitor.<domain>/`            | —                               | Simple nginx site with shortcuts to Netdata and Traefik. |
+| Netdata            | `https://monitor.<domain>/netdata`     | `http://localhost:19999`        | Container port 19999 is handy for local health checks; the `netdata-strip` middleware trims `/netdata` before forwarding. |
+| Monitoring landing | `https://monitor.<domain>/`            | —                               | Simple nginx site with shortcuts to Netdata and Traefik (path-based routing on the same host). |
 | WordPress #1       | `https://blog1.<domain>`               | `http://<server-ip>:8081`       | Direct ports are for testing without DNS/SSL. |
 | WordPress #2       | `https://blog2.<domain>`               | `http://<server-ip>:8082`       | Direct ports are for testing without DNS/SSL. |
 | WordPress #3       | `https://blog3.<domain>`               | `http://<server-ip>:8083`       | Direct ports are for testing without DNS/SSL. |
 | Moodle             | `https://moodle.<domain>`              | `http://<server-ip>:8084`       | Traefik handles TLS; host port is for smoke-testing. |
-| WordPress          | `https://blog1.<domain>`               | `http://<server-ip>:8081`       | Direct ports are for testing without DNS/SSL. |
 | Node API           | `https://nodeapi.<domain>`             | —                               | Served only through Traefik. |
 | Vue + Vite dev     | `https://vue.<domain>`                 | —                               | Runs under the `dev` compose profile; Traefik forwards to the Vite dev server on port 5173. |
 | Python FastAPI     | `https://api.<domain>`                 | —                               | Served only through Traefik. |

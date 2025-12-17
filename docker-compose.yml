@@ -261,7 +261,7 @@ services:
     restart: unless-stopped
 
   moodle:
-    image: bitnami/moodle:5.1
+    image: lthub/moodle:education
     container_name: moodle
     depends_on:
       moodle_db:

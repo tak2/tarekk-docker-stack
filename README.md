@@ -134,7 +134,7 @@ Use these direct host ports when DNS is unavailable or while testing locally; pr
 - Data persistence:
   - `moodle_app_data` → `/bitnami/moodle` (application files)
   - `moodle_moodledata` → `/bitnami/moodledata` (file uploads and course data)
-- Image tag: the compose file now uses `bitnami/moodle:latest` because the older `4` tag is no longer published on Docker Hub.
+- Image tag: the compose file now pins `bitnami/moodle:5.1` because the unversioned `latest` tag is no longer available on Docker Hub.
 - Direct, no-domain access for testing: `http://<server-ip>:8084` (Traefik terminates HTTPS for the public route).
 
 ## 🧑‍💻 API Endpoints

@@ -3,11 +3,7 @@ version: "3.8"
 networks:
   proxy:
     external: true
-  wp1_net:
-    driver: bridge
-  wp2_net:
-    driver: bridge
-  wp3_net:
+  wp_net:
     driver: bridge
   moodle_net:
     driver: bridge
@@ -17,14 +13,8 @@ volumes:
 
   vue_node_modules:
 
-  wp1_db_data:
-  wp1_wp_data:
-
-  wp2_db_data:
-  wp2_wp_data:
-
-  wp3_db_data:
-  wp3_wp_data:
+  wp_db_data:
+  wp_wp_data:
 
   moodle_db_data:
   moodle_app_data:
@@ -88,45 +78,45 @@ services:
     restart: unless-stopped
 
   # ==========================
-  # WordPress Site #1
+  # WordPress Site
   # ==========================
-  wp1_db:
+  wp_db:
     image: mariadb:10.11
-    container_name: wp1_db
+    container_name: wp_db
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: wp1_db
-      MYSQL_USER: wp1_user
+      MYSQL_DATABASE: wp_db
+      MYSQL_USER: wp_user
       MYSQL_PASSWORD: ${WP_DB_PASSWORD}
     volumes:
-      - "wp1_db_data:/var/lib/mysql"
+      - "wp_db_data:/var/lib/mysql"
     networks:
-      - wp1_net
+      - wp_net
     restart: unless-stopped
 
-  wp1:
+  wp:
     image: wordpress:php8.2-apache
-    container_name: wp1
+    container_name: wp
     depends_on:
-      - wp1_db
+      - wp_db
     environment:
-      WORDPRESS_DB_HOST: wp1_db:3306
-      WORDPRESS_DB_USER: wp1_user
+      WORDPRESS_DB_HOST: wp_db:3306
+      WORDPRESS_DB_USER: wp_user
       WORDPRESS_DB_PASSWORD: ${WP_DB_PASSWORD}
-      WORDPRESS_DB_NAME: wp1_db
+      WORDPRESS_DB_NAME: wp_db
     volumes:
-      - "wp1_wp_data:/var/www/html"
+      - "wp_wp_data:/var/www/html"
     ports:
       - "8081:80"
     networks:
       - proxy
-      - wp1_net
+      - wp_net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.wp1.rule=Host(`${BLOG1_SUB}.${DOMAIN}`)"
-      - "traefik.http.routers.wp1.entrypoints=websecure"
-      - "traefik.http.routers.wp1.tls.certresolver=le"
-      - "traefik.http.services.wp1.loadbalancer.server.port=80"
+      - "traefik.http.routers.wp.rule=Host(`${WP_SUB}.${DOMAIN}`)"
+      - "traefik.http.routers.wp.entrypoints=websecure"
+      - "traefik.http.routers.wp.tls.certresolver=le"
+      - "traefik.http.services.wp.loadbalancer.server.port=80"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost/wp-login.php || exit 1"]
       interval: 60s

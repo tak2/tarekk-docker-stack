@@ -35,7 +35,7 @@ A production-ready Docker hosting stack for Ubuntu 22.04+ that bundles Traefik, 
 
 - VPS with Ubuntu **22.04 LTS**
 - Root or sudo access
-- Domain name (e.g. `tarekk.com`) and DNS access to create A records
+- Domain name (e.g. `example.com`) and DNS access to create A records
 
 ## 🛠 Installation
 
@@ -77,9 +77,7 @@ A production-ready Docker hosting stack for Ubuntu 22.04+ that bundles Traefik, 
 1. Point the following subdomains to your server’s public IP (A records):
    ```
    panel.<domain>    → VPS IP (Portainer)
-   blog1.<domain>    → VPS IP (WordPress 1)
-   blog2.<domain>    → VPS IP (WordPress 2)
-   blog3.<domain>    → VPS IP (WordPress 3)
+   test.<domain>     → VPS IP (WordPress)
    moodle.<domain>   → VPS IP (Moodle LMS)
    monitor.<domain>  → VPS IP (Netdata)
    nodeapi.<domain>  → VPS IP (Node Express API)
@@ -99,7 +97,7 @@ Internet
 └─────┬───────┘
       │
       ├── panel.<domain>   → Portainer (Docker UI)
-      ├── blog1.<domain>   → WordPress
+      ├── test.<domain>    → WordPress
       ├── monitor.<domain> → Netdata Dashboard
       ├── nodeapi.<domain> → Node.js API
       ├── vue.<domain>     → Vue + Vite Dev (via Traefik)
@@ -114,9 +112,7 @@ Internet
 | Traefik dashboard  | `https://monitor.<domain>/traefik`     | —                               | Protected by the sample basic-auth hash in `docker-compose.yml`; replace with your own `htpasswd` output. |
 | Netdata            | `https://monitor.<domain>/netdata`     | `http://localhost:19999`        | Container port 19999 is handy for local health checks; the `netdata-strip` middleware trims `/netdata` before forwarding. |
 | Monitoring landing | `https://monitor.<domain>/`            | —                               | Simple nginx site with shortcuts to Netdata and Traefik (path-based routing on the same host). |
-| WordPress #1       | `https://blog1.<domain>`               | `http://<server-ip>:8081`       | Direct ports are for testing without DNS/SSL. |
-| WordPress #2       | `https://blog2.<domain>`               | `http://<server-ip>:8082`       | Direct ports are for testing without DNS/SSL. |
-| WordPress #3       | `https://blog3.<domain>`               | `http://<server-ip>:8083`       | Direct ports are for testing without DNS/SSL. |
+| WordPress          | `https://test.<domain>`                | `http://<server-ip>:8081`       | Direct ports are for testing without DNS/SSL. |
 | Moodle             | `https://moodle.<domain>`              | `http://<server-ip>:8084`       | Traefik handles TLS; host port is for smoke-testing. |
 | Node API           | `https://nodeapi.<domain>`             | —                               | Served only through Traefik. |
 | Vue + Vite dev     | `https://vue.<domain>`                 | —                               | Runs under the `dev` compose profile; Traefik forwards to the Vite dev server on port 5173. |
@@ -126,9 +122,9 @@ Use these direct host ports when DNS is unavailable or while testing locally; pr
 
 ## 📰 WordPress Site
 
-- Default site: `blog1.<domain>`
+- Default site: `test.<domain>`
 - The site has its own MariaDB container, WordPress container, isolated network, and persistent volumes.
-- To add a new site, duplicate the WordPress block in `docker-compose.yml` (e.g., copy `wp1` to create `wp2`) and adjust the subdomain, database, and labels.
+- To add more sites, duplicate the WordPress block in `docker-compose.yml`, adjust the service names, subdomain, database, and labels.
 - Direct, no-domain access for testing is available on the host at `http://<server-ip>:8081`.
 
 ## 🎓 Moodle LMS
